@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="theme-color" content="#1a120c" />
+    <title>EcoSwitch · Intelligent Zone-Based Classroom Energy Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231b1209'/%3E%3Cpath d='M16 5 L25 9.5 V17 c0 5.4-3.8 8.9-9 10.5-5.2-1.6-9-5.1-9-10.5V9.5z' fill='none' stroke='%23e0a94a' stroke-width='1.7'/%3E%3Cpath d='M17.4 10.5 L12 17.6h3.6l-1 5.4 5.6-7.6h-3.7z' fill='%23f0c168'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="scene"></canvas>
+      <div id="ui-root"></div>
+      <div id="boot">
+        <div class="boot-inner">
+          <div class="boot-mark">
+            <svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+              <path d="M32 6 L54 16 v17 c0 12.4-8.6 20.4-22 24.6C18.6 53.4 10 45.4 10 33V16z" fill="none" stroke="currentColor" stroke-width="2.4" />
+              <path d="M35 19 L23 37h7.6l-2.2 11.6L40 30h-8z" fill="currentColor" />
+            </svg>
+          </div>
+          <div class="boot-name">ECOSWITCH</div>
+          <div class="boot-sub">Zone-Based Classroom Energy Simulation</div>
+          <div class="boot-bar"><i></i></div>
+          <div class="boot-status" id="boot-status">warming up lights &amp; sensors…</div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
