@@ -502,7 +502,7 @@ export function buildClassroom() {
         float s = max(dot(normalize(vW), normalize(sunDir)), 0.0);
         c += sunCol * pow(s, 260.0) * 2.4;             // disc
         c += sunCol * pow(s, 7.0) * 0.30 * haze;        // bloom around the sun
-        c = mix(c, mix(bot,mid,top,0.35), smoothstep(0.35, 0.0, h)*0.5); // horizon haze
+        c = mix(c, mix(bot, mid, 0.35), smoothstep(0.35, 0.0, h) * 0.5); // horizon haze
         gl_FragColor = vec4(c, 1.0);
       }`,
   });
