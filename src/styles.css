@@ -40,8 +40,11 @@ canvas#scene { position: absolute; inset: 0; display: block; width: 100%; height
 /* Only the real interface layers swallow pointer events — overlays stay transparent
    to the canvas so orbiting / picking never gets eaten by an invisible box. */
 #ui-root .topbar, #ui-root .panel, #ui-root .dock, #ui-root .sheet.on,
-#ui-root .scrim.on, #ui-root .infocard.on, #ui-root .intro:not(.hide) { pointer-events: auto; }
+#ui-root .scrim.on, #ui-root .infocard.on { pointer-events: auto; }
 #ui-root .topbar:not(.on), #ui-root .dock:not(.on), #ui-root .panel:not(.on) { pointer-events: none; }
+/* opening cinematic: dim, never disable — the interface stays live underneath the film */
+#app.cinema #ui-root > .topbar, #app.cinema #ui-root > .dock { opacity: 0; }
+#app.cinema #ui-root > .panel { opacity: 0; }
 
 /* ---------------------------------------------------------------- boot --- */
 #boot {
@@ -367,7 +370,8 @@ input[type='range']::-moz-range-thumb { width: 12px; height: 12px; border: 0; bo
 @keyframes toastOut { to { opacity: 0; transform: translateY(-8px) scale(0.98); } }
 
 /* ------------------------------------------------------------ intro --- */
-.intro { position: absolute; inset: 0; display: grid; place-items: center; z-index: 26; transition: opacity 1s ease; }
+.intro { position: absolute; inset: 0; display: grid; place-items: center; z-index: 26; transition: opacity 1s ease; pointer-events: none; }
+.intro .wrap { pointer-events: auto; }
 .intro.hide { opacity: 0; pointer-events: none; }
 .intro .wrap { text-align: center; }
 .intro h1 { font-size: clamp(30px, 6.4vw, 72px); margin: 0; letter-spacing: 0.3em; font-weight: 300; color: #fdf6e8; text-shadow: 0 12px 42px rgba(0, 0, 0, 0.6); }
@@ -376,8 +380,8 @@ input[type='range']::-moz-range-thumb { width: 12px; height: 12px; border: 0; bo
 .intro .l3 { display: flex; gap: 22px; justify-content: center; margin-top: 26px; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(240, 224, 194, 0.55); }
 .intro .l3 span { opacity: 0; transform: translateY(9px); transition: 0.7s; }
 .intro .l3 span.on { opacity: 1; transform: none; }
-.intro .skip { margin-top: 30px; opacity: 0; transition: 0.6s; }
-.intro .skip.on { opacity: 1; }
+.intro .skip { margin-top: 30px; opacity: 0; animation: fadeUp 0.7s ease 1.1s both; }
+.intro .skip.on { opacity: 1; animation: none; }
 .intro .veil { position: absolute; inset: 0; background: radial-gradient(70% 60% at 50% 45%, rgba(10, 7, 4, 0.1), rgba(10, 7, 4, 0.78)); }
 
 /* ------------------------------------------------------- crosshair --- */

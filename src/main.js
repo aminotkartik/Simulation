@@ -26,6 +26,31 @@ import { createUI, updateUI, attachUIHandlers, setRigMode } from './ui/panels.js
 import { clamp, lerp, damp, Ease, TAU } from './core/utils.js';
 import { ZONES, ROOM, LIGHTS, FANS, SENSORS, LOADS, TIMING, TOTALS, STATE_COLORS, SCENARIOS, SEATS } from './config.js';
 
+/* ------------------------------------------------------------------ safety
+   If initialisation ever fails (blocked CDN font, missing extension, a driver
+   that refuses post-processing) the boot curtain must still lift and say why,
+   instead of leaving the viewer staring at a splash screen forever. */
+function hardFail(where, err) {
+  const b = document.getElementById('boot');
+  if (b) b.classList.add('gone');
+  const app = document.getElementById('app');
+  if (app) app.classList.remove('cinema');
+  if (document.getElementById('ui-root') && document.getElementById('ui-root').children.length) return;
+  const n = document.createElement('div');
+  n.id = 'fatal';
+  n.style.cssText =
+    'position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:80;font:500 11.5px/1.6 "IBM Plex Mono",monospace;' +
+    'color:#ffd9a2;background:rgba(30,20,13,.92);border:1px solid rgba(226,196,140,.34);border-radius:12px;padding:11px 16px;' +
+    'box-shadow:0 18px 40px -18px rgba(0,0,0,.8);max-width:min(70vw,560px)';
+  n.textContent = where + ' — ' + (err && err.message ? err.message : String(err || 'unknown')) + ' · reload to retry';
+  (app || document.body).appendChild(n);
+}
+addEventListener('error', (e) => hardFail('EcoSwitch could not start', e.error || e.message));
+setTimeout(() => {
+  const b = document.getElementById('boot');
+  if (b && !b.classList.contains('gone')) hardFail('EcoSwitch is slow to wake', 'still booting after 15 s');
+}, 15000);
+
 /* ------------------------------------------------------------------ audio */
 class AudioKit {
   constructor() {
@@ -148,6 +173,20 @@ camera.position.set(6.5, 2.3, 4.7);
 
 const sim = new Simulation();
 const rig = new CameraRig(camera, renderer.domElement, scene);
+rig.onMode = (m) => {
+  app._mode = m === 'fp' ? 'fp' : app._mode === 'fp' ? 'room' : app._mode;
+  setRigMode(app, app._mode);
+  document.body.classList.toggle('fps-ui', m === 'fp');
+  if (m === 'fp') {
+    app.hint.style.opacity = '1';
+    app.hint.innerHTML =
+      document.pointerLockElement
+        ? '<kbd>W A S D</kbd> move · mouse looks · <kbd>Shift</kbd> hurry · <kbd>C</kbd> crouch · <kbd>Esc</kbd> releases the mouse'
+        : '<kbd>W A S D</kbd> move · <kbd>drag</kbd> to look · <kbd>tap the floor</kbd> to walk there · <kbd>R</kbd> or the CLASSROOM button exits';
+    clearTimeout(endIntro._t);
+    endIntro._t = setTimeout(() => (app.hint.style.opacity = '0'), 9000);
+  }
+};
 rig.orbit.enabled = false; // the intro owns the camera until it hands over
 
 /* ------------------------------------------------------------ world build */
@@ -248,6 +287,9 @@ const env = {
 /* ------------------------------------------------------------------ UI */
 const ctl = {};
 const app = createUI(sim, rig, ctl);
+document.getElementById('app').classList.add('cinema');
+showConsoleNow(); // the console is interactive from frame one — the film only fades it back
+if (document.hidden) setTimeout(() => endIntro(), 400); // opened in a background tab: skip the film
 
 /* --------------------------------------------------------- ctl surface */
 Object.assign(ctl, {
@@ -277,7 +319,7 @@ Object.assign(ctl, {
       return;
     }
     document.body.classList.remove('fps-ui');
-    if (rig.mode === 'fp') rig.setMode('room');
+    if (rig.mode === 'fp' && mode !== 'fp') rig.setMode('room');
     if (mode === 'zone') {
       env.selectedZone = opts.zone;
       rig.view('zone', opts);
@@ -450,7 +492,20 @@ picker.onHover = (hit, pt) => {
     renderer.domElement.style.cursor = rig.mode === 'fp' ? 'none' : 'grab';
   }
 };
-picker.onClick = (hit) => {
+picker.onClick = (hit, e) => {
+  if (rig.mode === 'fp') {
+    // in walk mode a click on open floor walks you there; a click on a device inspects it
+    if (!hit || hit.pick.kind === 'zone') {
+      const cx = e && e.clientX != null ? e.clientX : innerWidth / 2;
+      const cy = e && e.clientY != null ? e.clientY : innerHeight / 2;
+      const g = rig.groundPoint(cx, cy);
+      if (g && rig.walkTo(g.x, g.z)) {
+        effects.ping(g.x, 0.03, g.z, 0.7, 0xffd9a2);
+        audio.ui();
+        return;
+      }
+    }
+  }
   if (!hit) {
     hideInfo();
     return;
@@ -733,29 +788,46 @@ function introAt(k) {
 const intro = app.intro;
 let introActive = true,
   introT = -0.6;
+const introStart = performance.now();
 const introEvents = [
   { t: 2.2, done: false, fn: () => applyScenario(sim, 8) },
   { t: 3.5, done: false, fn: () => effects.setViz(true) },
   { t: 5.0, done: false, fn: () => effects.setViz(false) },
   { t: 5.1, done: false, fn: () => app.skipBtn.parentElement.classList.add('on') },
 ];
+function showConsoleNow() {
+  ['top', 'left', 'right', 'dock'].forEach((k) => app[k] && app[k].classList.add('on'));
+}
+function showConsole() {
+  showConsoleNow();
+}
 function endIntro() {
   if (!introActive) return;
   introActive = false;
   rig.orbit.enabled = true;
   intro.classList.add('hide');
   setTimeout(() => (intro.style.display = 'none'), 1050);
-  app.top.classList.add('on');
-  setTimeout(() => app.left.classList.add('on'), 90);
-  setTimeout(() => app.right.classList.add('on'), 190);
-  setTimeout(() => app.dock.classList.add('on'), 280);
-  rig.view('room', { dur: 1.15 });
+  document.getElementById('app').classList.remove('cinema');
+  showConsole();
+  if (!rig.mode || rig.mode === 'room') rig.view('room', { dur: 1.15 });
   app.hint.style.opacity = '1';
-  setTimeout(() => (app.hint.style.opacity = '0'), 11000);
+  clearTimeout(endIntro._t);
+  endIntro._t = setTimeout(() => (app.hint.style.opacity = '0'), 11000);
+  app.toast('Click any device in the room to inspect it · press WALK to step inside', 'ok');
   app.runDay && app.runDay();
 }
+/* The cinematic must never be able to hold the interface hostage: a wall clock
+   plus three independent exits means input is always handed back. */
+setTimeout(endIntro, 12000);
+addEventListener('visibilitychange', () => {
+  if (!document.hidden && introActive && performance.now() - introStart > 3200) endIntro();
+});
+renderer.domElement.addEventListener('pointerdown', () => {
+  if (introActive && performance.now() - introStart > 900) endIntro();
+});
+addEventListener('wheel', () => introActive && endIntro(), { passive: true });
 function stepIntro(dt) {
-  introT += dt;
+  introT = (performance.now() - introStart) / 1000 - 0.6;
   const k = Math.max(0, introT);
   const s = introAt(Math.min(k, introKeys[introKeys.length - 1].t));
   camera.position.set(s.p[0], s.p[1], s.p[2]);
@@ -838,14 +910,11 @@ addEventListener('keydown', (e) => {
   f();
 });
 
+/* Losing the pointer lock must NOT eject the user from walk mode — in embedded
+   or sandboxed frames the lock is often refused outright, so drag-look is the
+   primary path and the lock is only ever an enhancement. */
 document.addEventListener('pointerlockchange', () => {
-  if (!document.pointerLockElement && rig.mode === 'fp') {
-    rig.setMode('room');
-    app._mode = 'room';
-    setRigMode(app, 'room');
-    document.body.classList.remove('fps-ui');
-    rig.view('room', { dur: 0.8 });
-  }
+  renderer.domElement.style.cursor = rig.mode === 'fp' ? (document.pointerLockElement ? 'none' : 'grab') : 'grab';
 });
 
 renderer.domElement.addEventListener('dblclick', (e) => {
@@ -910,10 +979,26 @@ let acc = 0,
   dimHold = [0, 0, 0];
 document.addEventListener('visibilitychange', () => (hidden = document.hidden));
 
+let loopErrors = 0;
 function frame() {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, clock.getDelta());
   if (hidden) return;
+  try {
+    frameBody(dt);
+  } catch (e) {
+    loopErrors++;
+    if (loopErrors === 1 || loopErrors % 120 === 0) console.error('EcoSwitch frame error', e);
+    if (loopErrors === 3 && bloomPass) {
+      // post-processing is the usual suspect — fall back to direct rendering
+      quality.bloom = false;
+      composer = null;
+    }
+    if (loopErrors > 40 && introActive) endIntro();
+    return;
+  }
+}
+function frameBody(dt) {
   env.clock += dt;
   frames++;
   fpsT += dt;
@@ -969,6 +1054,11 @@ function frame() {
     if (o.state !== 'walking') continue;
     const d = Math.hypot(o.x - (ROOM.xMax - 0.25), o.z - 1.55);
     near = Math.max(near, clamp(1 - d / 1.7));
+  }
+  if (rig.mode === 'fp') {
+    // the door answers to you as well
+    const dc = Math.hypot(camera.position.x - (ROOM.xMax - 0.25), camera.position.z - 1.55);
+    near = Math.max(near, clamp(1 - dc / 1.9));
   }
   env.doorOpen = damp(env.doorOpen, near, 5, dt);
 

@@ -39,6 +39,7 @@ export class Picker {
       cx = window.innerWidth / 2;
       cy = window.innerHeight / 2;
     }
+    this.camera.updateMatrixWorld(); // clicks can land between frames — never pick with a stale matrix
     this.ray.setFromCamera(new THREE.Vector2((cx / window.innerWidth) * 2 - 1, -(cy / window.innerHeight) * 2 + 1), this.camera);
     const hits = this.ray.intersectObjects(this.roots, true);
     for (const h of hits) {

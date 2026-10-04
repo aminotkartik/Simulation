@@ -475,7 +475,8 @@ export function createUI(sim, rig, ctl) {
     <h2>HOW TO <b>DRIVE</b> THE SIMULATION</h2>
     <p class="lede">EcoSwitch splits one real classroom into three open occupancy zones. Each zone owns two LED panels and one or two ceiling fans, and each zone runs its own state machine: presence is immediate ON, both sensors clear starts a grace period, and only when the timer expires do the loads drop. Move through the room, click anything, and watch the middle zone stay dark while its neighbours are lit.</p>
     <div class="keys">
-      <div><kbd>W A S D</kbd> walk (after WALK)</div>
+      <div><kbd>drag</kbd> orbit · <kbd>scroll</kbd> zoom</div>
+      <div><kbd>W A S D</kbd> walk · <kbd>drag</kbd> look · <kbd>tap floor</kbd> to walk there</div>
       <div><kbd>Shift</kbd> hurry</div>
       <div><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> focus zone</div>
       <div><kbd>V</kbd> sensor fields</div>
